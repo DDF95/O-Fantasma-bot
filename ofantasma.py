@@ -41,9 +41,9 @@ except Exception as e:
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.from_user.language_code == "it":
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="Ti scarico lu tiktok se mi invii il link")
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="Ti scarico lu tiktok. Fai /help se vuoi")
     else:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="I'll download your TikTok if you send me a link")
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="I'll download your TikTok. Do /help if you want")
 
 
 async def download_igstories(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -308,6 +308,13 @@ async def on_voice_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         print(e)
 
+        
+async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.message.from_user.language_code == "it":
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="Questo bot può scaricare automaticamente i video da TikTok, e i post, reel e storie di Instagram. Inoltre, trascrive automaticamente i messaggi audio.\n\nComandi:\n• <code>/storie @theofficialmads</code>: scarica tutte le storie di @theofficialmads\n• <code>/storie @theofficialmads last</code>: scarica solo l'ultima storia di @theofficialmads.\n• <code>/spongebob</code>\n\nSource code: https://github.com/DDF95/O-Fantasma-bot", parse_mode="HTML")
+    else:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="This bot can automatically download TikTok videos, and posts, reels and stories from Instagram. It also automatically transcribes audio messages.\n\nCommands:\n• <code>/stories @theofficialmads</code>: download all stories of @theofficialmads\n• <code>/stories @theofficialmads last</code>: download only the last story of @theofficialmads.\n• <code>/spongebob</code>\n\nSource code: https://github.com/DDF95/O-Fantasma-bot", parse_mode="HTML")
+
 
 if __name__ == '__main__':
     start_handler = CommandHandler('start', start)
@@ -327,5 +334,8 @@ if __name__ == '__main__':
 
     on_voice_message_handler = MessageHandler(filters.VOICE | filters.VIDEO_NOTE, on_voice_message)
     application.add_handler(on_voice_message_handler, 3)
+
+    help_handler = CommandHandler('help', help)
+    application.add_handler(help_handler, 4)
 
     application.run_polling()
