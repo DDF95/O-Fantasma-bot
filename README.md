@@ -30,5 +30,4 @@ I suggest you don't use your personal Instagram account.
 7. You are ready to go!
 
 ## To-do
-- support for videos bigger than 20MB in inline mode
 - toggleable functions per group
