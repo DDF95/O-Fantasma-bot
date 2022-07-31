@@ -20,3 +20,8 @@ I suggest you don't use your personal Instagram account.
 
 4. In `config.ini` put your bot token and your Instagram username.
 5. You are ready to go!
+
+## To-do
+- support for videos bigger than 20MB in inline mode
+- toggleable functions per group
+- /help message
