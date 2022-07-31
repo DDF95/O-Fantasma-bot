@@ -7,8 +7,9 @@ from pathlib import Path
 
 import instaloader
 import requests
-from telegram import (InlineQueryResultVideo, InputMediaPhoto, InputMediaVideo,
-                      Update, constants)
+from telegram import (InlineQueryResultArticle, InlineQueryResultVideo,
+                      InputMediaPhoto, InputMediaVideo,
+                      InputTextMessageContent, Update, constants)
 from telegram.ext import (ApplicationBuilder, CommandHandler, ContextTypes,
                           InlineQueryHandler, MessageHandler, filters)
 
@@ -122,6 +123,12 @@ async def download_igstories(update: Update, context: ContextTypes.DEFAULT_TYPE)
 async def link_downloader(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         if update.message:
+            if update.message.chat.type == "private":
+                print(f"{update.message.from_user.first_name}: {update.message.text}")
+
+            else:
+                print(f"{update.message.chat.title}: {update.message.from_user.first_name}: {update.message.text}")
+
             if update.message.text.startswith(("https://vm.tiktok.com", "https://www.tiktok.com")):
                 await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=constants.ChatAction.UPLOAD_VIDEO)
 
@@ -234,20 +241,35 @@ async def inline_tiktok_download(update: Update, context: ContextTypes.DEFAULT_T
             video_url = video_infos.get("video_url")
             caption = video_infos.get("caption")
             thumbnail = video_infos.get("thumbnail_url")
-
+            
             results = []
-            results.append(
-                InlineQueryResultVideo(
-                    id=str(uuid.uuid4()),
-                    video_url=video_url,
-                    mime_type="video/mp4",
-                    thumb_url=thumbnail,
-                    title=f"TikTok video by {username}",
-                    caption=caption,
-                    parse_mode="HTML"
+
+            if await file_in_limits(video_url):
+                results.append(
+                    InlineQueryResultVideo(
+                        id=str(uuid.uuid4()),
+                        video_url=video_url,
+                        mime_type="video/mp4",
+                        thumb_url=thumbnail,
+                        title=f"TikTok video by {username}",
+                        caption=caption,
+                        parse_mode="HTML"
+                    )
                 )
-            )
-            await context.bot.answer_inline_query(update.inline_query.id, results)
+                await context.bot.answer_inline_query(update.inline_query.id, results)
+            else:
+                results.append(
+                    InlineQueryResultArticle(
+                        id=str(uuid.uuid4()),
+                        title=f"TikTok video by {username}",
+                        input_message_content=InputTextMessageContent(
+                            f"The video is too big, but here's the direct link to view it in your browser: <a href='{video_url}'>link</a>\n\n{caption}",
+                            parse_mode="HTML"
+                        ),
+                        description=caption
+                    )
+                )
+                await context.bot.answer_inline_query(update.inline_query.id, results)
             return
 
     except Exception as e:
@@ -308,7 +330,7 @@ async def on_voice_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         print(e)
 
-        
+
 async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.from_user.language_code == "it":
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Questo bot può scaricare automaticamente i video da TikTok, e i post, reel e storie di Instagram. Inoltre, trascrive automaticamente i messaggi audio.\n\nComandi:\n• <code>/storie @theofficialmads</code>: scarica tutte le storie di @theofficialmads\n• <code>/storie @theofficialmads last</code>: scarica solo l'ultima storia di @theofficialmads.\n• <code>/spongebob</code>\n\nSource code: https://github.com/DDF95/O-Fantasma-bot", parse_mode="HTML")
