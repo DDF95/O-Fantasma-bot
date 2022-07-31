@@ -7,20 +7,27 @@ A Telegram bot that downloads TikTok videos and Instagram posts, reels and stori
 pip3 install python-telegram-bot --pre
 ```
 
+
 2. The other required packages can be installed with:
 ```
 pip3 install instaloader SpeechRecognition pydub
 ```
+
 
 3. You can login to Instagram using InstaLoader. In terminal, write:
 ```
 instaloader -l <Instagram username>
 ```
 I suggest you don't use your personal Instagram account.
+
+
 4. Put the generated session file in the same directory of `ofantasma.py`.
 
+
 5. In `config.ini` put your bot token and your Instagram username.
-6. You are ready to go!
+
+
+7. You are ready to go!
 
 ## To-do
 - support for videos bigger than 20MB in inline mode
