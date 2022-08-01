@@ -123,12 +123,6 @@ async def download_igstories(update: Update, context: ContextTypes.DEFAULT_TYPE)
 async def link_downloader(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         if update.message:
-            if update.message.chat.type == "private":
-                print(f"{update.message.from_user.first_name}: {update.message.text}")
-
-            else:
-                print(f"{update.message.chat.title}: {update.message.from_user.first_name}: {update.message.text}")
-
             if update.message.text.startswith(("https://vm.tiktok.com", "https://www.tiktok.com")):
                 await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=constants.ChatAction.UPLOAD_VIDEO)
 
