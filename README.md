@@ -27,7 +27,10 @@ I suggest you don't use your personal Instagram account.
 5. In `config.ini` put your bot token and your Instagram username.
 
 
-7. You are ready to go!
+7. You are ready to go! Start the bot using:
+```
+python3 ofantasma.py
+```
 
 ## To-do
 - toggleable functions per group
