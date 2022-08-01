@@ -33,9 +33,8 @@ application = ApplicationBuilder().token(BOT_TOKEN).build()
 directory = Path(__file__).absolute().parent
 
 try:
-    L = instaloader.Instaloader()
+    L = instaloader.Instaloader(dirname_pattern=f"{directory}/instagram/")
     L.load_session_from_file(USER, f"{directory}/session-{USER}")
-
 except Exception as e:
     print(e)
 
@@ -157,8 +156,9 @@ async def link_downloader(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     os.remove(f"{directory}/{filename}.mp4")
 
             if update.message.text.startswith(("https://www.instagram.com/p/", "https://www.instagram.com/reel/")):
+                await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=constants.ChatAction.UPLOAD_DOCUMENT)
+                
                 split_instagram_url = update.message.text.split("?")[0].split("/")
-
                 shortcode = split_instagram_url[4]
                 post = instaloader.Post.from_shortcode(L.context, shortcode)
                 username = post.owner_username
@@ -201,6 +201,8 @@ async def link_downloader(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await update.message.reply_text(f"@{username}\n{description}")
 
             if update.message.text.startswith(("https://www.instagram.com/stories/", "https://instagram.com/stories/")):
+                await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=constants.ChatAction.UPLOAD_DOCUMENT)
+                
                 split_instagram_url = update.message.text.split("?")[0].split("/")
 
                 media_id = split_instagram_url[5]
