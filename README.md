@@ -32,4 +32,4 @@ python3 ofantasma.py
 ```
 
 ## To-do
-- toggleable functions per group
+- 
