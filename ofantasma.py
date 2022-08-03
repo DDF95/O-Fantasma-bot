@@ -26,8 +26,7 @@ logging.basicConfig(
 directory = Path(__file__).absolute().parent
 
 cfg = ConfigParser(interpolation=None)
-config_file = Path(__file__).with_name('config.ini')
-cfg.read(config_file)
+cfg.read(f"{directory}/config.ini")
 
 BOT_TOKEN = cfg.get("bot", "bot_token")
 USER = cfg.get("bot", "ig_user")
@@ -424,104 +423,104 @@ async def settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
         query = update.callback_query
-
-        if query.data == "tiktokv":
-            if context.chat_data["settings"]["tiktokv"] == "✅":
-                context.chat_data["settings"]["tiktokv"] = "❌"
-            else:
-                context.chat_data["settings"]["tiktokv"] = "✅"
-            if update.callback_query.from_user.language_code == "it":
-                await query.answer(f"Impostazioni salvate.")
-            else:
-                await query.answer(f"Settings saved.")
-        
-        elif query.data == "instagramp":
-            if context.chat_data["settings"]["instagramp"] == "✅":
-                context.chat_data["settings"]["instagramp"] = "❌"
-            else:
-                context.chat_data["settings"]["instagramp"] = "✅"
-            if update.callback_query.from_user.language_code == "it":
-                await query.answer(f"Impostazioni salvate.")
-            else:
-                await query.answer(f"Settings saved.")
-        
-        elif query.data == "stories":
-            if context.chat_data["settings"]["stories"] == "✅":
-                context.chat_data["settings"]["stories"] = "❌"
-            else:
-                context.chat_data["settings"]["stories"] = "✅"
-            if update.callback_query.from_user.language_code == "it":
-                await query.answer(f"Impostazioni salvate.")
-            else:
-                await query.answer(f"Settings saved.")
-        
-        elif query.data == "att":
-            if context.chat_data["settings"]["att"] == "✅":
-                context.chat_data["settings"]["att"] = "❌"
-            else:
-                context.chat_data["settings"]["att"] = "✅"
-            if update.callback_query.from_user.language_code == "it":
-                await query.answer(f"Impostazioni salvate.")
-            else:
-                await query.answer(f"Settings saved.")
-        
-        elif query.data == "spongebob":
-            if context.chat_data["settings"]["spongebob"] == "✅":
-                context.chat_data["settings"]["spongebob"] = "❌"
-            else:
-                context.chat_data["settings"]["spongebob"] = "✅"
-            if update.callback_query.from_user.language_code == "it":
-                await query.answer(f"Impostazioni salvate.")
-            else:
-                await query.answer(f"Settings saved.")
-        elif query.data == "close":
+        if query.data == "close":
             await query.message.delete()
-            if update.callback_query.from_user.language_code == "it":
+            if query.from_user.language_code == "it":
                 await query.answer(f"Impostazioni chiuse.")
             else:
                 await query.answer(f"Settings closed.")
-
-        if update.callback_query.from_user.language_code == "it":
-            close_button = "Chiudi impostazioni"
         else:
-            close_button = "Close settings"
+            if query.data == "tiktokv":
+                if context.chat_data["settings"]["tiktokv"] == "✅":
+                    context.chat_data["settings"]["tiktokv"] = "❌"
+                else:
+                    context.chat_data["settings"]["tiktokv"] = "✅"
+                if update.callback_query.from_user.language_code == "it":
+                    await query.answer(f"Impostazioni salvate.")
+                else:
+                    await query.answer(f"Settings saved.")
+            
+            elif query.data == "instagramp":
+                if context.chat_data["settings"]["instagramp"] == "✅":
+                    context.chat_data["settings"]["instagramp"] = "❌"
+                else:
+                    context.chat_data["settings"]["instagramp"] = "✅"
+                if update.callback_query.from_user.language_code == "it":
+                    await query.answer(f"Impostazioni salvate.")
+                else:
+                    await query.answer(f"Settings saved.")
+            
+            elif query.data == "stories":
+                if context.chat_data["settings"]["stories"] == "✅":
+                    context.chat_data["settings"]["stories"] = "❌"
+                else:
+                    context.chat_data["settings"]["stories"] = "✅"
+                if update.callback_query.from_user.language_code == "it":
+                    await query.answer(f"Impostazioni salvate.")
+                else:
+                    await query.answer(f"Settings saved.")
+            
+            elif query.data == "att":
+                if context.chat_data["settings"]["att"] == "✅":
+                    context.chat_data["settings"]["att"] = "❌"
+                else:
+                    context.chat_data["settings"]["att"] = "✅"
+                if update.callback_query.from_user.language_code == "it":
+                    await query.answer(f"Impostazioni salvate.")
+                else:
+                    await query.answer(f"Settings saved.")
+            
+            elif query.data == "spongebob":
+                if context.chat_data["settings"]["spongebob"] == "✅":
+                    context.chat_data["settings"]["spongebob"] = "❌"
+                else:
+                    context.chat_data["settings"]["spongebob"] = "✅"
+                if update.callback_query.from_user.language_code == "it":
+                    await query.answer(f"Impostazioni salvate.")
+                else:
+                    await query.answer(f"Settings saved.")
 
-        keyboard = [
-            [
-                InlineKeyboardButton(f'TikTok videos: {context.chat_data["settings"]["tiktokv"]}', callback_data="tiktokv")
-            ],
-            [
-                InlineKeyboardButton(f'IG posts: {context.chat_data["settings"]["instagramp"]}', callback_data="instagramp"), 
-                InlineKeyboardButton(f'/stories: {context.chat_data["settings"]["stories"]}', callback_data="stories")
-            ],
-            [
-                InlineKeyboardButton(f'Audio to text: {context.chat_data["settings"]["att"]}', callback_data="att"), 
-                InlineKeyboardButton(f'/spongebob: {context.chat_data["settings"]["spongebob"]}', callback_data="spongebob")
-            ],
-            [
-                InlineKeyboardButton(close_button, callback_data="close")
+            if update.callback_query.from_user.language_code == "it":
+                close_button = "Chiudi impostazioni"
+            else:
+                close_button = "Close settings"
+
+            keyboard = [
+                [
+                    InlineKeyboardButton(f'TikTok videos: {context.chat_data["settings"]["tiktokv"]}', callback_data="tiktokv")
+                ],
+                [
+                    InlineKeyboardButton(f'IG posts: {context.chat_data["settings"]["instagramp"]}', callback_data="instagramp"), 
+                    InlineKeyboardButton(f'/stories: {context.chat_data["settings"]["stories"]}', callback_data="stories")
+                ],
+                [
+                    InlineKeyboardButton(f'Audio to text: {context.chat_data["settings"]["att"]}', callback_data="att"), 
+                    InlineKeyboardButton(f'/spongebob: {context.chat_data["settings"]["spongebob"]}', callback_data="spongebob")
+                ],
+                [
+                    InlineKeyboardButton(close_button, callback_data="close")
+                ]
             ]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
+            reply_markup = InlineKeyboardMarkup(keyboard)
 
-        if update.callback_query.from_user.language_code == "it":
-            await query.message.edit_text(
-                f'{context.chat_data["settings"]["tiktokv"]} - Autodownload dei video di TikTok\n'
-                f'{context.chat_data["settings"]["instagramp"]} - Autodownload dei post di Instagram\n'
-                f'{context.chat_data["settings"]["stories"]} - /storie\n'
-                f'{context.chat_data["settings"]["att"]} - Trascrizione dei messaggi vocali\n'
-                f'{context.chat_data["settings"]["spongebob"]} - /spongebob',
-                reply_markup=reply_markup
-            )
-        else:
-            await query.message.edit_text(
-                f'{context.chat_data["settings"]["tiktokv"]} - Autodownload of TikTok videos\n'
-                f'{context.chat_data["settings"]["instagramp"]} - Autodownload of Instagram posts\n'
-                f'{context.chat_data["settings"]["stories"]} - /stories\n'
-                f'{context.chat_data["settings"]["att"]} - Transcription of audio messages\n'
-                f'{context.chat_data["settings"]["spongebob"]} - /spongebob',
-                reply_markup=reply_markup
-            )
+            if update.callback_query.from_user.language_code == "it":
+                await query.message.edit_text(
+                    f'{context.chat_data["settings"]["tiktokv"]} - Autodownload dei video di TikTok\n'
+                    f'{context.chat_data["settings"]["instagramp"]} - Autodownload dei post di Instagram\n'
+                    f'{context.chat_data["settings"]["stories"]} - /storie\n'
+                    f'{context.chat_data["settings"]["att"]} - Trascrizione dei messaggi vocali\n'
+                    f'{context.chat_data["settings"]["spongebob"]} - /spongebob',
+                    reply_markup=reply_markup
+                )
+            else:
+                await query.message.edit_text(
+                    f'{context.chat_data["settings"]["tiktokv"]} - Autodownload of TikTok videos\n'
+                    f'{context.chat_data["settings"]["instagramp"]} - Autodownload of Instagram posts\n'
+                    f'{context.chat_data["settings"]["stories"]} - /stories\n'
+                    f'{context.chat_data["settings"]["att"]} - Transcription of audio messages\n'
+                    f'{context.chat_data["settings"]["spongebob"]} - /spongebob',
+                    reply_markup=reply_markup
+                )
     except Exception as e:
         print(e)
 
