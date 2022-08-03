@@ -376,6 +376,11 @@ async def settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "spongebob": "✅",
             }
 
+        if update.message.from_user.language_code == "it":
+            close_button = "Chiudi impostazioni"
+        else:
+            close_button = "Close settings"
+
         keyboard = [
             [
                 InlineKeyboardButton(f'TikTok videos: {context.chat_data["settings"]["tiktokv"]}', callback_data="tiktokv") 
@@ -387,6 +392,9 @@ async def settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [
                 InlineKeyboardButton(f'Audio to text: {context.chat_data["settings"]["att"]}', callback_data="att"), 
                 InlineKeyboardButton(f'/spongebob: {context.chat_data["settings"]["spongebob"]}', callback_data="spongebob")
+            ],
+            [
+                InlineKeyboardButton(close_button, callback_data="close")
             ]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -466,6 +474,17 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 await query.answer(f"Impostazioni salvate.")
             else:
                 await query.answer(f"Settings saved.")
+        elif query.data == "close":
+            await query.message.delete()
+            if update.callback_query.from_user.language_code == "it":
+                await query.answer(f"Impostazioni chiuse.")
+            else:
+                await query.answer(f"Settings closed.")
+
+        if update.callback_query.from_user.language_code == "it":
+            close_button = "Chiudi impostazioni"
+        else:
+            close_button = "Close settings"
 
         keyboard = [
             [
@@ -478,6 +497,9 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             [
                 InlineKeyboardButton(f'Audio to text: {context.chat_data["settings"]["att"]}', callback_data="att"), 
                 InlineKeyboardButton(f'/spongebob: {context.chat_data["settings"]["spongebob"]}', callback_data="spongebob")
+            ],
+            [
+                InlineKeyboardButton(close_button, callback_data="close")
             ]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
