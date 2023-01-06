@@ -3,7 +3,7 @@
 ## Setup
 1. Install the latest version of python-telegram-bot:
 ```
-pip3 install python-telegram-bot
+pip3 install -U python-telegram-bot
 ```
 
 
@@ -32,4 +32,5 @@ python3 ofantasma.py
 ```
 
 ## To-do
-- 
+- download Facebook videos
+- major code refactor
