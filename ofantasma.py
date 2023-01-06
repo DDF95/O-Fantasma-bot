@@ -1,22 +1,20 @@
 import logging
 import os
 import random
-import uuid
 from configparser import ConfigParser
 from pathlib import Path
 
 import instaloader
-import requests
 from telegram import (InlineKeyboardButton, InlineKeyboardMarkup,
-                      InlineQueryResultArticle, InlineQueryResultVideo,
-                      InputMediaPhoto, InputMediaVideo,
-                      InputTextMessageContent, Update, constants)
+                      InputMediaPhoto, InputMediaVideo, Update, constants)
 from telegram.ext import (ApplicationBuilder, CallbackQueryHandler,
                           CommandHandler, ContextTypes, InlineQueryHandler,
                           MessageHandler, PicklePersistence, filters)
+from transmission_rpc import Client
 
-from utilities import (file_in_limits, get_tiktok_username_id,
-                       get_tiktok_video_infos, transcribe_voice)
+from TikTok_scraper import *
+from utilities import *
+
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -39,7 +37,7 @@ persistence = PicklePersistence(filepath=f'{directory}/db/persistence.pkl')
 application = ApplicationBuilder().token(BOT_TOKEN).persistence(persistence).build()
 
 try:
-    L = instaloader.Instaloader(dirname_pattern=f"{directory}/instagram/")
+    L = instaloader.Instaloader(dirname_pattern=f"{directory}/instagram/", iphone_support=False, save_metadata=False)
     L.load_session_from_file(USER, f"{directory}/session-{USER}")
 except Exception as e:
     print(e)
@@ -127,110 +125,81 @@ async def download_igstories(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 
 async def link_downloader(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        if update.message:
-            if update.message.text.startswith(("https://vm.tiktok.com", "https://www.tiktok.com")):
-                if "settings" not in context.chat_data or context.chat_data["settings"]["tiktokv"] == "✅":
+    if update.message:
+        if update.message.text.startswith(("https://vm.tiktok.com", "https://www.tiktok.com")):
+            if "settings" not in context.chat_data or context.chat_data["settings"]["tiktokv"] == "✅":
+                await send_tiktok_video(update, context)
 
-                    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=constants.ChatAction.UPLOAD_VIDEO)
-
-                    url_infos = await get_tiktok_username_id(update.message.text)
-                    username = url_infos[0]
-                    video_id = url_infos[1]
-
-                    video_infos = await get_tiktok_video_infos(username, video_id)
-                    video_url = video_infos.get("video_url")
-                    caption = video_infos.get("caption")
-
-                    if await file_in_limits(video_url):
-                        await update.message.reply_video(video=video_url, parse_mode='HTML', caption=caption)
+        if update.message.text.startswith(("https://www.instagram.com/p/", "https://www.instagram.com/reel/")):
+            if "settings" not in context.chat_data or context.chat_data["settings"]["instagramp"] == "✅":
+                await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=constants.ChatAction.UPLOAD_DOCUMENT)
+                
+                split_instagram_url = update.message.text.split("?")[0].split("/")
+                shortcode = split_instagram_url[4]
+                post = instaloader.Post.from_shortcode(L.context, shortcode)
+                username = post.owner_username
+                if post.caption:
+                    if len(post.caption) > 200:
+                        description = post.caption[:200] + "..."
                     else:
-                        if update.message.from_user.language_code == "it":
-                            messaggio = await update.message.reply_text("Il video è più grande del solito, dammi qualche secondo ok")
-                        else:
-                            messaggio = await update.message.reply_text("The video is too big, give me a second ok")
-                        filename = uuid.uuid4()
-                        video_width = video_infos.get("width")
-                        video_height = video_infos.get("height")
-                        open(f"{directory}/{filename}.mp4",
-                            "wb").write(requests.get(video_url).content)
-                        await update.message.reply_video(
-                            video=open(f'{directory}/{filename}.mp4', "rb"),
-                            caption=caption,
-                            parse_mode='HTML',
-                            width=video_width,
-                            height=video_height
-                        )
-                        await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=messaggio.message_id)
-                        os.remove(f"{directory}/{filename}.mp4")
+                        description = post.caption
+                else:
+                    description = ""
 
-            if update.message.text.startswith(("https://www.instagram.com/p/", "https://www.instagram.com/reel/")):
-                if "settings" not in context.chat_data or context.chat_data["settings"]["instagramp"] == "✅":
-                    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=constants.ChatAction.UPLOAD_DOCUMENT)
-                    
-                    split_instagram_url = update.message.text.split("?")[0].split("/")
-                    shortcode = split_instagram_url[4]
-                    post = instaloader.Post.from_shortcode(L.context, shortcode)
-                    username = post.owner_username
-                    if post.caption:
-                        if len(post.caption) > 200:
-                            description = post.caption[:200] + "..."
-                        else:
-                            description = post.caption
-                    else:
-                        description = ""
+                if post.typename == "GraphImage":
+                    url = post.url
+                    await update.message.reply_photo(photo=url, parse_mode='HTML', caption=f"@{username}\n{description}")
 
-                    if post.typename == "GraphImage": # commented out because Telegram already privides the single image
-                        url = post.url
-                        # await update.message.reply_photo(photo=url, parse_mode='HTML', caption=f"@{username}\n{description}")
+                elif post.typename == "GraphVideo":
+                    url = post.video_url
+                    await update.message.reply_video(video=url, parse_mode='HTML', caption=f"@{username}\n{description}")
 
-                    elif post.typename == "GraphVideo":
-                        url = post.video_url
-                        await update.message.reply_video(video=url, parse_mode='HTML', caption=f"@{username}\n{description}")
-
-                    elif post.typename == "GraphSidecar":
-                        medialist = []
-                        for p in post.get_sidecar_nodes():
-                            if p.is_video:
-                                medialist.append(
-                                    InputMediaVideo(
-                                        media=p.video_url,
-                                        caption=f"@{username}\n{description}",
-                                        parse_mode='HTML'
-                                    )
+                elif post.typename == "GraphSidecar":
+                    medialist = []
+                    for p in post.get_sidecar_nodes():
+                        if p.is_video:
+                            medialist.append(
+                                InputMediaVideo(
+                                    media=p.video_url,
+                                    caption=f"@{username}\n{description}",
+                                    parse_mode='HTML'
                                 )
-                            else:
-                                medialist.append(
-                                    InputMediaPhoto(
-                                        media=p.display_url,
-                                        caption=f"@{username}\n{description}",
-                                        parse_mode='HTML'
-                                    )
+                            )
+                        else:
+                            medialist.append(
+                                InputMediaPhoto(
+                                    media=p.display_url,
+                                    caption=f"@{username}\n{description}",
+                                    parse_mode='HTML'
                                 )
-                        await update.message.reply_media_group(media=medialist)
-                        await update.message.reply_text(f"@{username}\n{description}")
+                            )
+                    await update.message.reply_media_group(media=medialist)
+                    await update.message.reply_text(f"@{username}\n{description}")
 
-            if update.message.text.startswith(("https://www.instagram.com/stories/", "https://instagram.com/stories/")):
-                if "settings" not in context.chat_data or context.chat_data["settings"]["instagramp"] == "✅":
-                    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=constants.ChatAction.UPLOAD_DOCUMENT)
-                    
-                    split_instagram_url = update.message.text.split("?")[0].split("/")
+        if update.message.text.startswith(("https://www.instagram.com/stories/", "https://instagram.com/stories/")):
+            if "settings" not in context.chat_data or context.chat_data["settings"]["instagramp"] == "✅":
+                await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=constants.ChatAction.UPLOAD_DOCUMENT)
+                
+                split_instagram_url = update.message.text.split("?")[0].split("/")
 
-                    media_id = split_instagram_url[5]
-                    story = instaloader.StoryItem.from_mediaid(
-                        L.context, int(media_id))
+                media_id = split_instagram_url[5]
+                story = instaloader.StoryItem.from_mediaid(
+                    L.context, int(media_id))
 
-                    if story.is_video:
-                        url = story.video_url
-                        username = story.owner_username
-                        await update.message.reply_video(video=url, parse_mode='HTML', caption=f"@{username}")
-                    else:
-                        url = story.url
-                        username = story.owner_username
-                        await update.message.reply_photo(photo=url, parse_mode='HTML', caption=f"@{username}")
+                if story.is_video:
+                    url = story.video_url
+                    username = story.owner_username
+                    await update.message.reply_video(video=url, parse_mode='HTML', caption=f"@{username}")
+                else:
+                    url = story.url
+                    username = story.owner_username
+                    await update.message.reply_photo(photo=url, parse_mode='HTML', caption=f"@{username}")
 
-    except Exception as e:
-        print(e)
+        if update.message.text.startswith(("magnet:", "https://proxyrarbg.org/download.php")):
+                magnet_url = update.message.text
+                c = Client(host="localhost", port=9091, username="admin", password="Eddy95")
+                torrent = c.add_torrent(magnet_url)
+                await update.message.reply_text(f"ok ho messo a scaricare `{torrent.name}`.", parse_mode="Markdown")
 
 
 async def inline_tiktok_download(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -238,49 +207,8 @@ async def inline_tiktok_download(update: Update, context: ContextTypes.DEFAULT_T
     if not query:
         return
 
-    try:
-        if query.startswith(("https://vm.tiktok.com", "https://www.tiktok.com")):
-            url_infos = await get_tiktok_username_id(query)
-            username = url_infos[0]
-            video_id = url_infos[1]
-
-            video_infos = await get_tiktok_video_infos(username, video_id)
-            video_url = video_infos.get("video_url")
-            caption = video_infos.get("caption")
-            thumbnail = video_infos.get("thumbnail_url")
-            
-            results = []
-
-            if await file_in_limits(video_url):
-                results.append(
-                    InlineQueryResultVideo(
-                        id=str(uuid.uuid4()),
-                        video_url=video_url,
-                        mime_type="video/mp4",
-                        thumb_url=thumbnail,
-                        title=f"TikTok video by {username}",
-                        caption=caption,
-                        parse_mode="HTML"
-                    )
-                )
-                await context.bot.answer_inline_query(update.inline_query.id, results)
-            else:
-                results.append(
-                    InlineQueryResultArticle(
-                        id=str(uuid.uuid4()),
-                        title=f"TikTok video by {username}",
-                        input_message_content=InputTextMessageContent(
-                            f"The video is too big, but here's the direct link to view it in your browser: <a href='{video_url}'>link</a>\n\n{caption}",
-                            parse_mode="HTML"
-                        ),
-                        description=caption
-                    )
-                )
-                await context.bot.answer_inline_query(update.inline_query.id, results)
-            return
-
-    except Exception as e:
-        print(e)
+    if query.startswith(("https://vm.tiktok.com", "https://www.tiktok.com")):
+        await send_tiktok_inline(update, context, query)
 
 
 async def spongebob(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -420,22 +348,134 @@ async def settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
         print(e)
 
 
-async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.message.reply_to_message:
+        await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.reply_to_message.message_id)
+
+
+async def get_torrent_list():
+    c = Client(host="localhost", port=9091, username="admin", password="Eddy95")
+    torrents = c.get_torrents()
+
+    import datetime
+    import time
+
+    if len(torrents) == 0:
+        all_torrents = "Non ci sono torrent in download."
+        return all_torrents
+    else:
+        all_torrents = ""
+        active_torrents = "Attivi nelle ultime 24 ore:\n\n"
+        download_speed = 0
+        upload_speed = 0
+
+        for torrent in torrents:
+            if torrent.rateDownload > 0: 
+                all_torrents += "⚡️ "
+            elif torrent.progress == 100:
+                all_torrents += "🎊 "
+            elif torrent.available == 0 and torrent.progress != 100:
+                all_torrents += "😡 "
+            elif torrent.available > 0 and torrent.progress != 100 and torrent.rateDownload == 0:
+                all_torrents += "🦦 "
+            torrent_name_fixed = torrent.name.replace(".", " ")
+
+            if torrent.rateDownload /1024 > 1024:
+                download_speed = f"{round(torrent.rateDownload / 1024 / 1024, 2)} MB/s"
+            else:
+                download_speed = f"{round(torrent.rateDownload / 1024, 2)} KB/s"
+            if torrent.rateUpload /1024 > 1024:
+                upload_speed = f"{round(torrent.rateUpload / 1024 / 1024, 2)} MB/s"
+            else:
+                upload_speed = f"{round(torrent.rateUpload / 1024, 2)} KB/s"
+
+            all_torrents += f"`{torrent_name_fixed}`\n*{torrent.progress}% | ↓ {download_speed} | ↑ {upload_speed}*\n\n"
+
+            last_activity = int(datetime.datetime.timestamp(torrent.date_active))
+
+            if time.time() - last_activity < 86400:
+                if torrent.rateDownload > 0:
+                    active_torrents += "⚡️ "
+                elif torrent.progress == 100:
+                    active_torrents += "🎊 "
+                elif torrent.available == 0 and torrent.progress != 100:
+                    active_torrents += "😡 "
+                elif torrent.available > 0 and torrent.progress != 100 and torrent.rateDownload == 0:
+                    active_torrents += "🦦 "
+                torrent_name_fixed = torrent.name.replace(".", " ")
+
+                if torrent.rateDownload /1024 > 1024:
+                    download_speed = f"{round(torrent.rateDownload / 1024 / 1024, 2)} MB/s"
+                else:
+                    download_speed = f"{round(torrent.rateDownload / 1024, 2)} KB/s"
+                if torrent.rateUpload /1024 > 1024:
+                    upload_speed = f"{round(torrent.rateUpload / 1024 / 1024, 2)} MB/s"
+                else:
+                    upload_speed = f"{round(torrent.rateUpload / 1024, 2)} KB/s"
+                
+                active_torrents += f"`{torrent_name_fixed}`\n*{torrent.progress}% | ↓ {download_speed} | ↑ {upload_speed}*\n\n"
+
+        if active_torrents == "Attivi nelle ultime 24 ore:\n\n":
+            active_torrents = "Non ci sono torrent attivi nelle ultime 24 ore."
+                
+        return all_torrents, active_torrents
+
+
+async def view_torrents(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        [
+            InlineKeyboardButton("Refresh", callback_data="refresh"),
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    all_torrents, active_torrents = await get_torrent_list()
+
+    if context.args and context.args[0] == "-a":
+        await update.message.reply_text(active_torrents, reply_markup=reply_markup, parse_mode="Markdown")
+    else:
+        await update.message.reply_text(all_torrents, reply_markup=reply_markup, parse_mode="Markdown")
+
+        
+async def add_magnet_download(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    magnet_url = context.args[0]
+    c = Client(host="localhost", port=9091, username="admin", password="Eddy95")
+    torrent = c.add_torrent(magnet_url)
+    await update.message.reply_text(f"ok ho messo a scaricare `{torrent.name}`.", parse_mode="Markdown")
+
+
+async def settings_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
         query = update.callback_query
+
         if query.data == "close":
             await query.message.delete()
             if query.from_user.language_code == "it":
                 await query.answer(f"Impostazioni chiuse.")
             else:
                 await query.answer(f"Settings closed.")
+        
+        elif query.data == "refresh":
+            keyboard = [
+                [
+                    InlineKeyboardButton("Refresh", callback_data="refresh"),
+                ]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+
+            all_torrents, active_torrents = await get_torrent_list()
+
+            if query.message.text.startswith("Attivi"):
+                await query.message.edit_text(active_torrents, reply_markup=reply_markup, parse_mode="Markdown")
+            else:
+                await query.message.edit_text(all_torrents, reply_markup=reply_markup, parse_mode="Markdown")
         else:
             if query.data == "tiktokv":
                 if context.chat_data["settings"]["tiktokv"] == "✅":
                     context.chat_data["settings"]["tiktokv"] = "❌"
                 else:
                     context.chat_data["settings"]["tiktokv"] = "✅"
-                if update.callback_query.from_user.language_code == "it":
+                if query.from_user.language_code == "it":
                     await query.answer(f"Impostazioni salvate.")
                 else:
                     await query.answer(f"Settings saved.")
@@ -445,7 +485,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                     context.chat_data["settings"]["instagramp"] = "❌"
                 else:
                     context.chat_data["settings"]["instagramp"] = "✅"
-                if update.callback_query.from_user.language_code == "it":
+                if query.from_user.language_code == "it":
                     await query.answer(f"Impostazioni salvate.")
                 else:
                     await query.answer(f"Settings saved.")
@@ -455,7 +495,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                     context.chat_data["settings"]["stories"] = "❌"
                 else:
                     context.chat_data["settings"]["stories"] = "✅"
-                if update.callback_query.from_user.language_code == "it":
+                if query.from_user.language_code == "it":
                     await query.answer(f"Impostazioni salvate.")
                 else:
                     await query.answer(f"Settings saved.")
@@ -465,7 +505,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                     context.chat_data["settings"]["att"] = "❌"
                 else:
                     context.chat_data["settings"]["att"] = "✅"
-                if update.callback_query.from_user.language_code == "it":
+                if query.from_user.language_code == "it":
                     await query.answer(f"Impostazioni salvate.")
                 else:
                     await query.answer(f"Settings saved.")
@@ -475,12 +515,12 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                     context.chat_data["settings"]["spongebob"] = "❌"
                 else:
                     context.chat_data["settings"]["spongebob"] = "✅"
-                if update.callback_query.from_user.language_code == "it":
+                if query.from_user.language_code == "it":
                     await query.answer(f"Impostazioni salvate.")
                 else:
                     await query.answer(f"Settings saved.")
 
-            if update.callback_query.from_user.language_code == "it":
+            if query.from_user.language_code == "it":
                 close_button = "Chiudi impostazioni"
             else:
                 close_button = "Close settings"
@@ -503,7 +543,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
 
-            if update.callback_query.from_user.language_code == "it":
+            if query.from_user.language_code == "it":
                 await query.message.edit_text(
                     f'{context.chat_data["settings"]["tiktokv"]} - Autodownload dei video di TikTok\n'
                     f'{context.chat_data["settings"]["instagramp"]} - Autodownload dei post di Instagram\n'
@@ -523,6 +563,11 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 )
     except Exception as e:
         print(e)
+
+
+async def restart_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Restarting...")
+    restart()
 
 
 if __name__ == '__main__':
@@ -550,7 +595,19 @@ if __name__ == '__main__':
     settings_handler = CommandHandler(('settings', 'impostazioni'), settings)
     application.add_handler(settings_handler, 5)
 
-    button_handler = CallbackQueryHandler(button)
-    application.add_handler(button_handler, 6)
+    settings_button_handler = CallbackQueryHandler(settings_button)
+    application.add_handler(settings_button_handler, 6)
 
-    application.run_polling()
+    delete_handler = CommandHandler("delete", delete)
+    application.add_handler(delete_handler, 7) 
+
+    view_torrents_handler = CommandHandler("torrent", view_torrents)
+    application.add_handler(view_torrents_handler, 8)
+
+    add_magnet_download_handler = CommandHandler("add", add_magnet_download)
+    application.add_handler(add_magnet_download_handler, 9)
+
+    restart_bot_handler = CommandHandler("restart", restart_bot)
+    application.add_handler(restart_bot_handler, 10)
+
+    application.run_polling(drop_pending_updates=True)
