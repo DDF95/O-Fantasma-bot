@@ -3,13 +3,13 @@
 ## Setup
 1. Install the latest version of python-telegram-bot:
 ```
-pip3 install python-telegram-bot --pre
+pip3 install python-telegram-bot
 ```
 
 
 2. The other required packages can be installed with:
 ```
-pip3 install instaloader SpeechRecognition pydub
+pip3 install instaloader SpeechRecognition pydub aiohttp
 ```
 
 
