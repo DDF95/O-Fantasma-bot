@@ -9,7 +9,7 @@ pip3 install -U python-telegram-bot
 
 2. The other required packages can be installed with:
 ```
-pip3 install instaloader SpeechRecognition pydub aiohttp
+pip3 install requests instaloader SpeechRecognition pydub aiohttp yt-dlp requests-html
 ```
 
 
@@ -32,5 +32,5 @@ python3 ofantasma.py
 ```
 
 ## To-do
-- download Facebook videos
-- major code refactor
+- fix some Facebook videos apoearing empty on Telegram
+- settings refactor
