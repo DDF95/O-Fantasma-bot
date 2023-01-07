@@ -1,16 +1,19 @@
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import requests
 import speech_recognition as sr
 from pydub import AudioSegment
+from telegram import Update
+from telegram.ext import ContextTypes
 
 
 directory = Path(__file__).absolute().parent
 
 
-def restart():
+async def restart_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Restarting...")
     args = sys.argv[:]
     args.insert(0, sys.executable)
     os.chdir(os.getcwd())
