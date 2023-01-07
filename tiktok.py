@@ -6,7 +6,8 @@ from urllib import parse
 import aiohttp
 import requests
 from telegram import (InlineQueryResultArticle, InlineQueryResultVideo,
-                      InputTextMessageContent, constants)
+                      InputTextMessageContent, constants, Update)
+from telegram.ext import ContextTypes
 from telegram.error import BadRequest
 
 from utilities import *
@@ -120,44 +121,49 @@ async def send_tiktok_video(update, context):
                 await update.message.reply_html(f"Telegram doesn't support this video, but if you click <a href='{video_url}'>here</a> you can watch it in the browser.")
 
 
-async def send_tiktok_inline(update, context, query):
-    try:
-        url_infos = await get_tiktok_username_id(query)
-        username = url_infos[0]
-        video_id = url_infos[1]
+async def inline_tiktok_download(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.inline_query.query
+    if not query:
+        return
 
-        video_infos = await get_tiktok_video_infos(username, video_id)
-        video_url = video_infos.get("video_url")
-        caption = video_infos.get("caption")
-        thumbnail = video_infos.get("thumbnail_url")
-        
-        results = []
-        if await file_in_limits(video_url):
-            results.append(
-                InlineQueryResultVideo(
-                    id=str(uuid.uuid4()),
-                    video_url=video_url,
-                    mime_type="video/mp4",
-                    thumb_url=thumbnail,
-                    title=f"TikTok video by {username}",
-                    caption=caption,
-                    parse_mode="HTML"
-                )
-            )
-            await context.bot.answer_inline_query(update.inline_query.id, results)
-        else:
-            results.append(
-                InlineQueryResultArticle(
-                    id=str(uuid.uuid4()),
-                    title=f"TikTok video by {username}",
-                    input_message_content=InputTextMessageContent(
-                        f"The video is too big, but here's the direct link to view it in your browser: <a href='{video_url}'>link</a>\n\n{caption}",
+    if query.startswith(("https://vm.tiktok.com", "https://www.tiktok.com")):
+        try:
+            url_infos = await get_tiktok_username_id(query)
+            username = url_infos[0]
+            video_id = url_infos[1]
+
+            video_infos = await get_tiktok_video_infos(username, video_id)
+            video_url = video_infos.get("video_url")
+            caption = video_infos.get("caption")
+            thumbnail = video_infos.get("thumbnail_url")
+            
+            results = []
+            if await file_in_limits(video_url):
+                results.append(
+                    InlineQueryResultVideo(
+                        id=str(uuid.uuid4()),
+                        video_url=video_url,
+                        mime_type="video/mp4",
+                        thumb_url=thumbnail,
+                        title=f"TikTok video by {username}",
+                        caption=caption,
                         parse_mode="HTML"
-                    ),
-                    description=caption
+                    )
                 )
-            )
-            await context.bot.answer_inline_query(update.inline_query.id, results)
-    except Exception as e:
-        print(e)
-        pass
+                await context.bot.answer_inline_query(update.inline_query.id, results)
+            else:
+                results.append(
+                    InlineQueryResultArticle(
+                        id=str(uuid.uuid4()),
+                        title=f"TikTok video by {username}",
+                        input_message_content=InputTextMessageContent(
+                            f"The video is too big, but here's the direct link to view it in your browser: <a href='{video_url}'>link</a>\n\n{caption}",
+                            parse_mode="HTML"
+                        ),
+                        description=caption
+                    )
+                )
+                await context.bot.answer_inline_query(update.inline_query.id, results)
+        except Exception as e:
+            print(e)
+            pass
