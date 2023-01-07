@@ -23,7 +23,7 @@ I suggest you don't use your personal Instagram account.
 4. Put the generated session file in the same directory of `ofantasma.py`.
 
 
-5. In `config.ini` put your bot token and your Instagram username.
+5. In `config.ini` put your bot token, your Instagram username, the admin user IDs and the Transmission parameters.
 
 
 7. You are ready to go! Start the bot using:
@@ -34,3 +34,6 @@ python3 ofantasma.py
 ## To-do
 - fix some Facebook videos apoearing empty on Telegram
 - settings refactor
+- add a function to check if the bot can send a message, based on settings and admin status
+- don't load a .py file if the needed config parameters are not set
+- if no bot token is set, ask for it in the terminal
