@@ -1,15 +1,34 @@
 import os
 import sys
+from configparser import ConfigParser
 from pathlib import Path
 
 import requests
-import speech_recognition as sr
-from pydub import AudioSegment
 from telegram import Update
 from telegram.ext import ContextTypes
 
 
-directory = Path(__file__).absolute().parent
+DIRECTORY = Path(__file__).absolute().parent
+
+cfg = ConfigParser(interpolation=None)
+cfg.read(f"{DIRECTORY}/config.ini")
+
+BOT_TOKEN = cfg.get("bot", "bot_token")
+IG_USER = cfg.get("bot", "ig_user")
+
+BOT_ADMINS = [int(admin) for admin in cfg["bot_admins"].values()]
+
+HOST = cfg.get("transmission", "host")
+PORT = cfg.getint("transmission", "port")
+USERNAME = cfg.get("transmission", "username")
+PASSWORD = cfg.get("transmission", "password")
+
+
+def is_bot_admin(user_id):
+    if user_id in BOT_ADMINS:
+        return True
+    else:
+        return False
 
 
 async def restart_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -28,18 +47,3 @@ async def file_in_limits(url) -> bool:
     if ('image' in info.headers["Content-Type"]) and (int(info.headers["Content-Length"]) <= 5000000):
         return True
     return False
-
-
-def transcribe_voice(path):
-    new_path = f"{directory}/file.wav"
-    AudioSegment.from_file(path).export(new_path, format='wav')
-
-    r = sr.Recognizer()
-    with sr.AudioFile(new_path) as source:
-        audio = r.record(source)
-    os.remove(new_path)
-
-    try:
-        return r.recognize_google(audio, language="it-IT")
-    except sr.UnknownValueError:
-        return '<inaudible>'

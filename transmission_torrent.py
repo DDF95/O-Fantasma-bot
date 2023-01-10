@@ -1,22 +1,8 @@
-from configparser import ConfigParser
-from pathlib import Path
-
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 from transmission_rpc import Client
 
-
-directory = Path(__file__).absolute().parent
-
-cfg = ConfigParser(interpolation=None)
-cfg.read(f"{directory}/config.ini")
-
-HOST = cfg.get("transmission", "host")
-PORT = cfg.getint("transmission", "port")
-USERNAME = cfg.get("transmission", "username")
-PASSWORD = cfg.get("transmission", "password")
-
-BOT_ADMINS = [int(admin) for admin in cfg["bot_admins"].values()]
+from utilities import *
 
 
 async def get_torrent_list():
@@ -88,7 +74,7 @@ async def get_torrent_list():
 
 
 async def view_torrents(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.from_user.id in BOT_ADMINS:
+    if is_bot_admin(update.message.from_user.id):
         keyboard = [
             [
                 InlineKeyboardButton("Refresh", callback_data="refresh"),
@@ -105,7 +91,7 @@ async def view_torrents(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
 
 async def add_torrent(update, context):
-    if update.message.from_user.id in BOT_ADMINS:
+    if is_bot_admin(update.message.from_user.id):
         magnet_url = update.message.text
         c = Client(host="localhost", port=9091, username="admin", password="Eddy95")
         torrent = c.add_torrent(magnet_url)

@@ -1,8 +1,6 @@
 import logging
 import os
 import random
-from configparser import ConfigParser
-from pathlib import Path
 
 import instaloader
 from telegram import (InlineKeyboardButton, InlineKeyboardMarkup,
@@ -13,6 +11,7 @@ from telegram.ext import (ApplicationBuilder, CallbackQueryHandler,
 
 from facebook import *
 from tiktok import *
+from transcribe import *
 from transmission_torrent import *
 from utilities import *
 
@@ -22,24 +21,16 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-directory = Path(__file__).absolute().parent
+if not os.path.exists(f"{DIRECTORY}/db"):
+    os.makedirs(f"{DIRECTORY}/db")
 
-cfg = ConfigParser(interpolation=None)
-cfg.read(f"{directory}/config.ini")
-
-BOT_TOKEN = cfg.get("bot", "bot_token")
-USER = cfg.get("bot", "ig_user")
-
-if not os.path.exists(f"{directory}/db"):
-    os.makedirs(f"{directory}/db")
-
-persistence = PicklePersistence(filepath=f'{directory}/db/persistence.pkl')
+persistence = PicklePersistence(filepath=f'{DIRECTORY}/db/persistence.pkl')
 
 application = ApplicationBuilder().token(BOT_TOKEN).persistence(persistence).build()
 
 try:
-    L = instaloader.Instaloader(dirname_pattern=f"{directory}/instagram/", iphone_support=False, save_metadata=False)
-    L.load_session_from_file(USER, f"{directory}/session-{USER}")
+    L = instaloader.Instaloader(dirname_pattern=f"{DIRECTORY}/instagram/", iphone_support=False, save_metadata=False)
+    L.load_session_from_file(IG_USER, f"{DIRECTORY}/session-{IG_USER}")
 except Exception as e:
     print(e)
 
@@ -230,31 +221,6 @@ async def spongebob(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     except Exception:
         pass
-
-
-async def on_voice_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        if "settings" not in context.chat_data or context.chat_data["settings"]["att"] == "✅":
-            if update.message.voice:
-                file = await update.message.voice.get_file()
-                path = await file.download()
-                response = transcribe_voice(path)
-                os.remove(path)
-                if update.message.from_user.language_code == "it":
-                    await context.bot.send_message(update.message.chat.id, f"Trascrizione:\n{response}", reply_to_message_id=update.message.message_id)
-                else:
-                    await context.bot.send_message(update.message.chat.id, f"Transcription:\n{response}", reply_to_message_id=update.message.message_id)
-            elif update.message.video_note:
-                file = await update.message.video_note.get_file()
-                path = await file.download()
-                response = transcribe_voice(path)
-                os.remove(path)
-                if update.message.from_user.language_code == "it":
-                    await context.bot.send_message(update.message.chat.id, f"Trascrizione:\n{response}", reply_to_message_id=update.message.message_id)
-                else:
-                    await context.bot.send_message(update.message.chat.id, f"Transcription:\n{response}", reply_to_message_id=update.message.message_id)    
-    except Exception as e:
-        print(e)
 
 
 async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):

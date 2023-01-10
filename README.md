@@ -34,6 +34,6 @@ python3 ofantasma.py
 ## To-do
 - fix some Facebook videos apoearing empty on Telegram
 - settings refactor
-- add a function to check if the bot can send a message, based on settings and admin status
+- add a function to check if the bot can send a message, based on settings
 - don't load a .py file if the needed config parameters are not set
 - if no bot token is set, ask for it in the terminal

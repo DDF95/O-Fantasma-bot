@@ -13,7 +13,7 @@ from telegram.error import BadRequest
 from utilities import *
 
 
-directory = Path(__file__).absolute().parent
+DIRECTORY = Path(__file__).absolute().parent
 
 
 async def get_tiktok_video_infos(username: str, video_ID: str) -> dict:
@@ -100,17 +100,17 @@ async def send_tiktok_video(update, context):
         filename = uuid.uuid4()
         video_width = video_infos.get("width")
         video_height = video_infos.get("height")
-        open(f"{directory}/{filename}.mp4",
+        open(f"{DIRECTORY}/{filename}.mp4",
             "wb").write(requests.get(video_url).content)
         await update.message.reply_video(
-            video=open(f'{directory}/{filename}.mp4', "rb"),
+            video=open(f'{DIRECTORY}/{filename}.mp4', "rb"),
             caption=caption,
             parse_mode='HTML',
             width=video_width,
             height=video_height
         )
         await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=messaggio.message_id)
-        os.remove(f"{directory}/{filename}.mp4")
+        os.remove(f"{DIRECTORY}/{filename}.mp4")
     else:
         try:
             await update.message.reply_video(video=video_url, parse_mode='HTML', caption=caption)
