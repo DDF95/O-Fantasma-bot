@@ -1,7 +1,7 @@
 import yt_dlp
 from telegram import constants
 
-from utilities import *
+from utilities import file_in_limits
 
 
 async def send_facebook_video(update, context):

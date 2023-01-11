@@ -1,31 +1,15 @@
 import os
 import sys
-from configparser import ConfigParser
-from pathlib import Path
 
 import requests
 from telegram import Update
 from telegram.ext import ContextTypes
 
-
-DIRECTORY = Path(__file__).absolute().parent
-
-cfg = ConfigParser(interpolation=None)
-cfg.read(f"{DIRECTORY}/config.ini")
-
-BOT_TOKEN = cfg.get("bot", "bot_token")
-IG_USER = cfg.get("bot", "ig_user")
-
-BOT_ADMINS = [int(admin) for admin in cfg["bot_admins"].values()]
-
-HOST = cfg.get("transmission", "host")
-PORT = cfg.getint("transmission", "port")
-USERNAME = cfg.get("transmission", "username")
-PASSWORD = cfg.get("transmission", "password")
+import config
 
 
 def is_bot_admin(user_id):
-    if user_id in BOT_ADMINS:
+    if user_id in config.BOT_ADMINS:
         return True
     else:
         return False

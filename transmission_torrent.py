@@ -2,11 +2,12 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 from transmission_rpc import Client
 
-from utilities import *
+import config
+from utilities import is_bot_admin
 
 
 async def get_torrent_list():
-    c = Client(host=HOST, port=PORT, username=USERNAME, password=PASSWORD)
+    c = Client(host=config.HOST, port=config.PORT, username=config.USERNAME, password=config.PASSWORD)
     torrents = c.get_torrents()
 
     import datetime

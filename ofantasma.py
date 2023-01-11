@@ -9,11 +9,12 @@ from telegram.ext import (ApplicationBuilder, CallbackQueryHandler,
                           CommandHandler, ContextTypes, InlineQueryHandler,
                           MessageHandler, PicklePersistence, filters)
 
-from facebook import *
-from tiktok import *
-from transcribe import *
-from transmission_torrent import *
-from utilities import *
+import config
+from facebook import send_facebook_video
+from tiktok import inline_tiktok_download, send_tiktok_video
+from transcribe import on_voice_message
+from transmission_torrent import add_torrent, get_torrent_list, view_torrents
+from utilities import restart_bot
 
 
 logging.basicConfig(
@@ -21,16 +22,16 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-if not os.path.exists(f"{DIRECTORY}/db"):
-    os.makedirs(f"{DIRECTORY}/db")
+if not os.path.exists(f"{config.main_directory}/db"):
+    os.makedirs(f"{config.main_directory}/db")
 
-persistence = PicklePersistence(filepath=f'{DIRECTORY}/db/persistence.pkl')
+persistence = PicklePersistence(filepath=f'{config.main_directory}/db/persistence.pkl')
 
-application = ApplicationBuilder().token(BOT_TOKEN).persistence(persistence).build()
+application = ApplicationBuilder().token(config.BOT_TOKEN).persistence(persistence).build()
 
 try:
-    L = instaloader.Instaloader(dirname_pattern=f"{DIRECTORY}/instagram/", iphone_support=False, save_metadata=False)
-    L.load_session_from_file(IG_USER, f"{DIRECTORY}/session-{IG_USER}")
+    L = instaloader.Instaloader(dirname_pattern=f"{config.main_directory}/instagram/", iphone_support=False, save_metadata=False)
+    L.load_session_from_file(config.IG_USER, f"{config.main_directory}/session-{config.IG_USER}")
 except Exception as e:
     print(e)
 

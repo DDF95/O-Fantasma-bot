@@ -1,10 +1,15 @@
-from utilities import *
+import os
+
 import speech_recognition
 from pydub import AudioSegment
+from telegram import Update
+from telegram.ext import ContextTypes
+
+import config
 
 
 def transcribe_voice(path):
-    new_path = f"{DIRECTORY}/file.wav"
+    new_path = f"{config.main_directory}/file.wav"
     AudioSegment.from_file(path).export(new_path, format='wav')
 
     r = speech_recognition.Recognizer()
