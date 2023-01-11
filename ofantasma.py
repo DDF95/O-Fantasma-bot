@@ -3,18 +3,18 @@ import os
 import random
 
 import instaloader
-from telegram import (InlineKeyboardButton, InlineKeyboardMarkup,
-                      InputMediaPhoto, InputMediaVideo, Update, constants)
+from telegram import InputMediaPhoto, InputMediaVideo, Update, constants
 from telegram.ext import (ApplicationBuilder, CallbackQueryHandler,
                           CommandHandler, ContextTypes, InlineQueryHandler,
                           MessageHandler, PicklePersistence, filters)
 
 import config
 from facebook import send_facebook_video
+from settings import settings, settings_button
 from tiktok import inline_tiktok_download, send_tiktok_video
 from transcribe import on_voice_message
-from transmission_torrent import add_torrent, get_torrent_list, view_torrents
-from utilities import restart_bot
+from transmission_torrent import add_torrent, view_torrents
+from utilities import delete_msg, restart_bot
 
 
 logging.basicConfig(
@@ -251,188 +251,6 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 
-async def settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        if not "settings" in context.chat_data:
-            context.chat_data["settings"] = {
-                "tiktokv": "✅",
-                "instagramp": "✅",
-                "stories": "✅",
-                "att": "✅",
-                "spongebob": "✅",
-            }
-
-        if update.message.from_user.language_code == "it":
-            close_button = "Chiudi impostazioni"
-        else:
-            close_button = "Close settings"
-
-        keyboard = [
-            [
-                InlineKeyboardButton(f'TikTok videos: {context.chat_data["settings"]["tiktokv"]}', callback_data="tiktokv") 
-            ],
-            [
-                InlineKeyboardButton(f'IG posts: {context.chat_data["settings"]["instagramp"]}', callback_data="instagramp"), 
-                InlineKeyboardButton(f'/stories: {context.chat_data["settings"]["stories"]}', callback_data="stories")
-            ],
-            [
-                InlineKeyboardButton(f'Audio to text: {context.chat_data["settings"]["att"]}', callback_data="att"), 
-                InlineKeyboardButton(f'/spongebob: {context.chat_data["settings"]["spongebob"]}', callback_data="spongebob")
-            ],
-            [
-                InlineKeyboardButton(close_button, callback_data="close")
-            ]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-
-        if update.message.from_user.language_code == "it":
-            await update.message.reply_text(
-                f'{context.chat_data["settings"]["tiktokv"]} - Autodownload dei video di TikTok\n'
-                f'{context.chat_data["settings"]["instagramp"]} - Autodownload dei post di Instagram\n'
-                f'{context.chat_data["settings"]["stories"]} - /storie\n'
-                f'{context.chat_data["settings"]["att"]} - Trascrizione dei messaggi vocali\n'
-                f'{context.chat_data["settings"]["spongebob"]} - /spongebob',
-                reply_markup=reply_markup
-            )
-        else:
-            await update.message.reply_text(
-                f'{context.chat_data["settings"]["tiktokv"]} - Autodownload of TikTok videos\n'
-                f'{context.chat_data["settings"]["instagramp"]} - Autodownload of Instagram posts\n'
-                f'{context.chat_data["settings"]["stories"]} - /stories\n'
-                f'{context.chat_data["settings"]["att"]} - Transcription of audio messages\n'
-                f'{context.chat_data["settings"]["spongebob"]} - /spongebob',
-                reply_markup=reply_markup
-            )
-    except Exception as e:
-        print(e)
-
-
-async def delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.reply_to_message:
-        await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.reply_to_message.message_id)
-
-
-async def settings_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    try:
-        query = update.callback_query
-
-        if query.data == "close":
-            await query.message.delete()
-            if query.from_user.language_code == "it":
-                await query.answer(f"Impostazioni chiuse.")
-            else:
-                await query.answer(f"Settings closed.")
-        
-        elif query.data == "refresh":
-            keyboard = [
-                [
-                    InlineKeyboardButton("Refresh", callback_data="refresh"),
-                ]
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-
-            all_torrents, active_torrents = await get_torrent_list()
-
-            if query.message.text.startswith("Attivi"):
-                await query.message.edit_text(active_torrents, reply_markup=reply_markup, parse_mode="Markdown")
-            else:
-                await query.message.edit_text(all_torrents, reply_markup=reply_markup, parse_mode="Markdown")
-        else:
-            if query.data == "tiktokv":
-                if context.chat_data["settings"]["tiktokv"] == "✅":
-                    context.chat_data["settings"]["tiktokv"] = "❌"
-                else:
-                    context.chat_data["settings"]["tiktokv"] = "✅"
-                if query.from_user.language_code == "it":
-                    await query.answer(f"Impostazioni salvate.")
-                else:
-                    await query.answer(f"Settings saved.")
-            
-            elif query.data == "instagramp":
-                if context.chat_data["settings"]["instagramp"] == "✅":
-                    context.chat_data["settings"]["instagramp"] = "❌"
-                else:
-                    context.chat_data["settings"]["instagramp"] = "✅"
-                if query.from_user.language_code == "it":
-                    await query.answer(f"Impostazioni salvate.")
-                else:
-                    await query.answer(f"Settings saved.")
-            
-            elif query.data == "stories":
-                if context.chat_data["settings"]["stories"] == "✅":
-                    context.chat_data["settings"]["stories"] = "❌"
-                else:
-                    context.chat_data["settings"]["stories"] = "✅"
-                if query.from_user.language_code == "it":
-                    await query.answer(f"Impostazioni salvate.")
-                else:
-                    await query.answer(f"Settings saved.")
-            
-            elif query.data == "att":
-                if context.chat_data["settings"]["att"] == "✅":
-                    context.chat_data["settings"]["att"] = "❌"
-                else:
-                    context.chat_data["settings"]["att"] = "✅"
-                if query.from_user.language_code == "it":
-                    await query.answer(f"Impostazioni salvate.")
-                else:
-                    await query.answer(f"Settings saved.")
-            
-            elif query.data == "spongebob":
-                if context.chat_data["settings"]["spongebob"] == "✅":
-                    context.chat_data["settings"]["spongebob"] = "❌"
-                else:
-                    context.chat_data["settings"]["spongebob"] = "✅"
-                if query.from_user.language_code == "it":
-                    await query.answer(f"Impostazioni salvate.")
-                else:
-                    await query.answer(f"Settings saved.")
-
-            if query.from_user.language_code == "it":
-                close_button = "Chiudi impostazioni"
-            else:
-                close_button = "Close settings"
-
-            keyboard = [
-                [
-                    InlineKeyboardButton(f'TikTok videos: {context.chat_data["settings"]["tiktokv"]}', callback_data="tiktokv")
-                ],
-                [
-                    InlineKeyboardButton(f'IG posts: {context.chat_data["settings"]["instagramp"]}', callback_data="instagramp"), 
-                    InlineKeyboardButton(f'/stories: {context.chat_data["settings"]["stories"]}', callback_data="stories")
-                ],
-                [
-                    InlineKeyboardButton(f'Audio to text: {context.chat_data["settings"]["att"]}', callback_data="att"), 
-                    InlineKeyboardButton(f'/spongebob: {context.chat_data["settings"]["spongebob"]}', callback_data="spongebob")
-                ],
-                [
-                    InlineKeyboardButton(close_button, callback_data="close")
-                ]
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-
-            if query.from_user.language_code == "it":
-                await query.message.edit_text(
-                    f'{context.chat_data["settings"]["tiktokv"]} - Autodownload dei video di TikTok\n'
-                    f'{context.chat_data["settings"]["instagramp"]} - Autodownload dei post di Instagram\n'
-                    f'{context.chat_data["settings"]["stories"]} - /storie\n'
-                    f'{context.chat_data["settings"]["att"]} - Trascrizione dei messaggi vocali\n'
-                    f'{context.chat_data["settings"]["spongebob"]} - /spongebob',
-                    reply_markup=reply_markup
-                )
-            else:
-                await query.message.edit_text(
-                    f'{context.chat_data["settings"]["tiktokv"]} - Autodownload of TikTok videos\n'
-                    f'{context.chat_data["settings"]["instagramp"]} - Autodownload of Instagram posts\n'
-                    f'{context.chat_data["settings"]["stories"]} - /stories\n'
-                    f'{context.chat_data["settings"]["att"]} - Transcription of audio messages\n'
-                    f'{context.chat_data["settings"]["spongebob"]} - /spongebob',
-                    reply_markup=reply_markup
-                )
-    except Exception as e:
-        print(e)
-
-
 if __name__ == '__main__':
     start_handler = CommandHandler('start', start)
     application.add_handler(start_handler, 0)
@@ -461,7 +279,7 @@ if __name__ == '__main__':
     settings_button_handler = CallbackQueryHandler(settings_button)
     application.add_handler(settings_button_handler, 6)
 
-    delete_handler = CommandHandler("delete", delete)
+    delete_handler = CommandHandler(('delete', 'cancella', 'elimina'), delete_msg)
     application.add_handler(delete_handler, 7) 
 
     view_torrents_handler = CommandHandler("torrent", view_torrents)

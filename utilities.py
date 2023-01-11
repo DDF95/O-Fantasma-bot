@@ -23,6 +23,11 @@ async def restart_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
     os.execv(sys.executable, args)
 
 
+async def delete_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.message.reply_to_message:
+        await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.reply_to_message.message_id)
+
+
 async def file_in_limits(url) -> bool:
     info = requests.head(url)
     if ('mp4' in info.headers["Content-Type"]) and (int(info.headers["Content-Length"]) <= 20000000):

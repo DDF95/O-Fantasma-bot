@@ -20,7 +20,7 @@ def transcribe_voice(path):
     try:
         return r.recognize_google(audio, language="it-IT")
     except speech_recognition.UnknownValueError:
-        return '<inaudible>'
+        pass
 
 
 async def on_voice_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
