@@ -21,7 +21,8 @@ async def get_tiktok_video_infos(username: str, video_ID: str) -> dict:
     infos = {}
     headers = {'User-Agent': 'com.ss.android.ugc.trill/494+Mozilla/5.0+(Linux;+Android+12;+2112123G+Build/SKQ1.211006.001;+wv)+AppleWebKit/537.36+(KHTML,+like+Gecko)+Version/4.0+Chrome/107.0.5304.105+Mobile+Safari/537.36'}
 
-    api_url = f"https://api16-normal-c-useast1a.tiktokv.com/aweme/v1/feed/?aweme_id={video_ID}"
+    api_url = f"https://api22-normal-c-useast2a.tiktokv.com/aweme/v1/feed/?aweme_id={video_ID}"
+
     async with aiohttp.ClientSession() as session:
         async with session.get(api_url, headers=headers, timeout=10) as response:
             response = await response.json()
@@ -48,7 +49,7 @@ async def get_tiktok_video_infos(username: str, video_ID: str) -> dict:
     return infos
 
 
-async def get_tiktok_username_id(url):
+async def get_tiktok_username_id(url, update, context):
     """
     Get the username and the video id from a tiktok url
     """
@@ -64,10 +65,23 @@ async def get_tiktok_username_id(url):
 
         username = info_list[3]
         id = info_list[5]
+
     elif purl.netloc == 'www.tiktok.com':
-        username = purl.path.split("/")[1]
-        id = purl.path.split("/")[3]
-        link = url
+        if url.startswith("https://www.tiktok.com/@"):
+            username = purl.path.split("/")[1]
+            id = purl.path.split("/")[3]
+            link = url
+        elif url.startswith("https://www.tiktok.com/t/"):
+            tiktok_id = url.split("/")[4]
+            link = f"https://vm.tiktok.com/{tiktok_id}"
+            headers = {'User-Agent': 'Mozilla/5.0 (Linux; Android 11) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36'}
+            response = requests.get(link, headers=headers)
+
+            info_list = requests.utils.unquote(response.url).split("?")[0].split("/")
+
+            username = info_list[3]
+            id = info_list[5]
+
     else:
         raise RuntimeError
     return (username, id, link)
@@ -76,7 +90,7 @@ async def get_tiktok_username_id(url):
 async def send_tiktok_video(update, context):
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=constants.ChatAction.UPLOAD_VIDEO)
 
-    url_infos = await get_tiktok_username_id(update.message.text)
+    url_infos = await get_tiktok_username_id(update.message.text, update, context)
     username = url_infos[0]
     video_id = url_infos[1]
 
